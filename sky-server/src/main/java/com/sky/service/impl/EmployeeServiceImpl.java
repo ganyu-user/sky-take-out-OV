@@ -78,16 +78,16 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         Employee employee = new Employee();
 
-//        对象属性拷贝
+        //对象属性拷贝
         BeanUtils.copyProperties(employeeDTO,employee);
-//        设置账号状态，默认正常状态
+        //设置账号状态，默认正常状态
         employee.setStatus(StatusConstant.ENABLE);
-//        设置初始密码123456
+        //设置初始密码123456
         employee.setPassword(DigestUtils.md5DigestAsHex(PasswordConstant.DEFAULT_PASSWORD.getBytes()));
-//        设置创建时间和修改时间
+        //设置创建时间和修改时间
         employee.setCreateTime(LocalDateTime.now());
         employee.setUpdateTime(LocalDateTime.now());
-//        记录当前记录创建人id和修改人id
+        //记录当前记录创建人id和修改人id
         employee.setCreateUser(BaseContext.getCurrentId());
         employee.setUpdateUser(BaseContext.getCurrentId());
 
@@ -121,6 +121,31 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .status(status)
                 .id(id)
                 .build();
+        employeeMapper.update(employee);
+    }
+
+    /*
+     * 根据id查询员工
+     * @param id
+     * @return
+     */
+    public Employee getById(Long id){
+        Employee employee = employeeMapper.getById(id);
+        employee.setPassword("****");
+        return employee;
+    }
+
+    /**
+     * 编辑员工信息
+     * @param employeeDTO
+     */
+    public void update(EmployeeDTO employeeDTO){
+        Employee employee = new Employee();
+        //对象属性拷贝
+        BeanUtils.copyProperties(employeeDTO,employee);
+        //设置修改人和修改时间
+        employee.setUpdateTime(LocalDateTime.now());
+        employee.setUpdateUser(BaseContext.getCurrentId());
         employeeMapper.update(employee);
     }
 }
