@@ -79,7 +79,7 @@ public class DishServiceImpl implements DishService {
      * 菜品批量删除
      * @param ids
      */
-    @Override
+    @Transactional
     public void deleteBatch(List<Long> ids) {
         //判断当前菜品是否能被删除--停售或起售，起售不可删除
         for (Long id : ids) {
@@ -97,11 +97,75 @@ public class DishServiceImpl implements DishService {
             throw new DeletionNotAllowedException(MessageConstant.DISH_BE_RELATED_BY_SETMEAL);
         }
 
-        //删除菜品表中的菜品
+        //已把下列代码优化
+
+        /*//删除菜品表中的菜品
         for (Long id : ids) {
             dishMapper.deleteById(id);
             //删除口味表中的关联数据
             dishFlavorMapper.deleteByDishId(id);
         }
+*/
+        //删除菜品表中的菜品
+        dishMapper.deleteByIds(ids);
+        //删除口味表中的关联数据
+        dishFlavorMapper.deleteByDishIds(ids);
+
+    }
+
+    /**
+     * 根据id查询菜品和对应的口味数据
+     * @param id
+     * @return
+     */
+    public DishVO getByIdWithFlavor(Long id) {
+        //1根据id查询菜品数据
+        Dish dish = dishMapper.getById(id);
+
+        //2根据id查询口味数据
+        List<DishFlavor> dishFlavors=dishFlavorMapper.getByDishId(id);
+
+        //3把两部分数据整合到VO中
+        DishVO dishVO = new DishVO();
+        BeanUtils.copyProperties(dish,dishVO);
+        dishVO.setFlavors(dishFlavors);
+
+        return dishVO;
+    }
+
+    /**
+     * 菜品修改
+     * @param dishDTO
+     */
+    public void updateWithFlavor(DishDTO dishDTO){
+        //摘除DTO中的口味信息
+        Dish dish = new Dish();
+        BeanUtils.copyProperties(dishDTO,dish);
+
+        //修改菜品基础数据
+        dishMapper.update(dish);
+
+        //修改口味数据---先完全删除---后插入新数据
+        //删
+        dishFlavorMapper.deleteByDishId(dishDTO.getId());
+        //获
+        List<DishFlavor> flavors = dishDTO.getFlavors();
+        //插
+        if(flavors!=null&&flavors.size()>0){
+            flavors.forEach(dishFlavor -> {
+                dishFlavor.setDishId(dishDTO.getId());
+            });
+            dishFlavorMapper.insertBatch(flavors);
+        }
+    }
+
+    /**
+     * 菜品起售、停售
+     * @param status
+     * @param id
+     */
+    public void startOrStop(Integer status, Long id) {
+        Dish dish = Dish.builder().id(id).status(status).build();
+        dishMapper.update(dish);
     }
 }
