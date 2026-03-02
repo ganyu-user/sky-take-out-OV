@@ -168,4 +168,20 @@ public class DishServiceImpl implements DishService {
         Dish dish = Dish.builder().id(id).status(status).build();
         dishMapper.update(dish);
     }
+
+    /**
+     * 根据分类id查询菜品
+     * @param categoryId
+     * @return
+     */
+    public List<Dish> list(Long categoryId,String name) {
+        // 废弃builder，直接new对象，用set赋值（彻底解决赋值失败问题）
+        Dish dish = new Dish();
+        dish.setCategoryId(categoryId);  // 手动赋值，绝对成功！
+        dish.setName(name);
+        dish.setStatus(StatusConstant.ENABLE);
+
+        System.out.println("搜索关键词：" + dish.getName());
+        return dishMapper.list(dish);
+    }
 }
