@@ -18,7 +18,7 @@ import java.util.List;
 
 @RestController
 @Slf4j
-@Api(tags = "套餐相关接口")
+@Api(tags = "Setmeal(套餐相关接口)")
 @RequestMapping("/admin/setmeal")
 public class SetmealController {
 
@@ -30,7 +30,7 @@ public class SetmealController {
      * @param setmealDTO
      * @return
      */
-    @ApiOperation("新增套餐")
+    @ApiOperation("save(新增套餐)")
     @PostMapping
     public Result save(@RequestBody SetmealDTO setmealDTO) {
         log.info("新增套餐:{}", setmealDTO);
@@ -44,7 +44,7 @@ public class SetmealController {
      * @return
      */
     @GetMapping("/page")
-    @ApiOperation("分页查询")
+    @ApiOperation("page(分页查询)")
     public Result<PageResult> page(SetmealPageQueryDTO setmealPageQueryDTO) {
         log.info("分页查询:{}", setmealPageQueryDTO);
         PageResult pageResult = setmealService.pageQuery(setmealPageQueryDTO);
@@ -56,7 +56,7 @@ public class SetmealController {
      * @param ids
      * @return
      */
-    @ApiOperation("批量删除套餐")
+    @ApiOperation("delete(批量删除套餐)")
     @DeleteMapping
     public Result delete(@RequestParam List<Long> ids) {
         setmealService.deleteBatch(ids);
@@ -68,7 +68,7 @@ public class SetmealController {
      * @param id
      * @return
      */
-    @ApiOperation("根据id查询套餐")
+    @ApiOperation("getById(根据id查询套餐)")
     @GetMapping("/{id}")
     public Result<SetmealVO> getById(@PathVariable Long id) {
         SetmealVO setmealVO=setmealService.getByIdWithDish(id);
@@ -80,7 +80,7 @@ public class SetmealController {
      * @param setmealDTO
      * @return
      */
-    @ApiOperation("修改套餐")
+    @ApiOperation("update(修改套餐)")
     @PutMapping
     public Result update(@RequestBody SetmealDTO setmealDTO) {
         setmealService.update(setmealDTO);
@@ -93,7 +93,7 @@ public class SetmealController {
      * @param id
      * @return
      */
-    @ApiOperation("套餐停售起售")
+    @ApiOperation("startOrStop(套餐停售起售)")
     @PostMapping("/status/{status}")
     public Result startOrStop(@PathVariable Integer status, Long id) {
         setmealService.startOrStop(status,id);

@@ -7,6 +7,9 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+/**
+ * 配置类：用于创建Redis对象
+ */
 @Configuration
 @Slf4j
 public class RedisConfiguration {

@@ -20,7 +20,7 @@ import java.util.Map;
 * */
 @RestController
 @RequestMapping("/admin/category")
-@Api(tags = "CategoryController(分类相关接口)")
+@Api(tags = "Category(分类相关接口)")
 @Slf4j
 public class CategoryController {
     @Autowired

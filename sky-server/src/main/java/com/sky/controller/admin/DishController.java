@@ -21,7 +21,7 @@ import java.util.List;
  */
 @Slf4j
 @RestController
-@Api(tags = "菜品相关接口")
+@Api(tags = "Dish(菜品相关接口)")
 @RequestMapping("/admin/dish")
 public class DishController {
     @Autowired
@@ -112,7 +112,7 @@ public class DishController {
      * @return
      */
     @GetMapping("/list")
-    @ApiOperation("根据分类id查询菜品")
+    @ApiOperation("list(根据分类id查询菜品)")
     public Result<List<Dish>> list(Long categoryId,String name){
         List<Dish> list = dishService.list(categoryId,name);
         return Result.success(list);
