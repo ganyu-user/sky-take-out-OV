@@ -582,4 +582,20 @@ public class OrderServiceImpl implements OrderService {
         }
     }
     //TODO 若超出配送范围，前端没有响应
+
+    /**
+     * 用户催单
+     * @param id
+     * @return
+     */
+    public void reminder(Long id) {
+        //获取订单号
+        Orders orders = orderMapper.getById(id);
+        Map map =  new HashMap();
+        map.put("type",2);
+        map.put("orderId",id);
+        map.put("content","订单号："+orders.getNumber());
+        String json = JSON.toJSONString(map);
+        webSocketServer.sendToAllClient(json);
+    }
 }
