@@ -2,11 +2,13 @@ package com.sky.service.impl;
 
 import com.sky.entity.Orders;
 import com.sky.mapper.OrderMapper;
+import com.sky.mapper.UserMapper;
 import com.sky.service.ReportService;
+import com.sky.vo.OrderReportVO;
 import com.sky.vo.TurnoverReportVO;
+import com.sky.vo.UserReportVO;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.poi.util.StringUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +27,9 @@ public class ReportServiceImpl implements ReportService {
     @Autowired
     private OrderMapper orderMapper;
 
+    @Autowired
+    private UserMapper userMapper;
+
     /**
      * 营业额统计接口
      * @param begin
@@ -32,19 +37,96 @@ public class ReportServiceImpl implements ReportService {
      * @return
      */
     public TurnoverReportVO getTurnoverStatistics(LocalDate begin, LocalDate end) {
-        //  存放从begin到end之间的日期集合
-        List<LocalDate> dateList = new ArrayList();
-
-        dateList.add(begin);
-        while(!begin.equals(end)){
-            begin = begin.plusDays(1);
-            dateList.add(begin);
-        }
-
+        //  1:存放从begin到end之间的日期集合
+        List<LocalDate> dateList = getDateList(begin, end);
 
         //  存放从begin到end之间的每个日期对应的营业额的集合
         List<Double> turnoverList=new ArrayList<>();
 
+        for (LocalDate date : dateList) {
+            //  LocalDate是年月日，LocalDateTime是时分秒
+            LocalDateTime dateBeginTime = LocalDateTime.of(date, LocalTime.MIN);  //  获取一天开始的时间
+            LocalDateTime dateEndTime = LocalDateTime.of(date, LocalTime.MAX);  //  获取一天结束的时间
+
+            //  把三个参数封装成 map
+            Map map = new HashMap();
+            map.put("begin", dateBeginTime);
+            map.put("end", dateEndTime);
+            map.put("status",Orders.COMPLETED); //状态为5（已完成）
+
+            Double turnover = orderMapper.getSumByMap(map);
+
+            //  判断当天营业额是否为null，如果是null转换成0
+            turnover = turnover == null ? 0.0 : turnover;
+            turnoverList.add(turnover);
+        }
+
+        return TurnoverReportVO
+                .builder()
+                .dateList(StringUtils.join(dateList, ",")) //  把列表的元素用 “，” 隔开
+                .turnoverList(StringUtils.join(turnoverList, ","))
+                .build();
+    }
+
+    /**
+     * 用户统计
+     * @param begin
+     * @param end
+     * @return
+     */
+    public UserReportVO getUserStatistics(LocalDate begin, LocalDate end) {
+        //  1:存放从begin到end之间的日期集合
+        List<LocalDate> dateList = getDateList(begin, end);
+
+        //  2:存放从begin到end之间的每天对应的用户总数量的集合
+        List<Integer> totalUserList=new ArrayList<>();
+        //  3:存放从begin到end之间的每天对应的新增用户数量的集合
+        List<Integer> newUserLIst = new ArrayList<>();
+
+        for (LocalDate date : dateList) {
+            //  LocalDate是年月日，LocalDateTime是时分秒
+            LocalDateTime dateBeginTime = LocalDateTime.of(date, LocalTime.MIN);  //  获取一天开始的时间
+            LocalDateTime dateEndTime = LocalDateTime.of(date, LocalTime.MAX);  //  获取一天结束的时间
+
+            //  封装成 map
+            Map map = new HashMap();
+            map.put("end", dateEndTime);
+
+            //  总用户数量
+            Integer totalUser = userMapper.countByMap(map);
+
+            map.put("begin", dateBeginTime);
+            //  新增用户数量
+            Integer newUser = userMapper.countByMap(map);
+
+            totalUserList.add(totalUser);
+            newUserLIst.add(newUser);
+        }
+
+        return UserReportVO
+                .builder()
+                .dateList(StringUtils.join(dateList, ",")) //  把列表的元素用 “，” 隔开
+                .totalUserList(StringUtils.join(totalUserList, ","))
+                .newUserList(StringUtils.join(newUserLIst, ","))
+                .build();
+    }
+
+    /**
+     * 订单统计
+     * @param begin
+     * @param end
+     * @return
+     */
+    public OrderReportVO getOrdersStatistics(LocalDate begin, LocalDate end) {
+        //  存放从begin到end之间的日期集合
+        List<LocalDate> dateList = getDateList(begin, end);
+
+        //  存放从begin到end之间的每天对应的 有效订单数量 的集合
+        List<Integer> validOrderCountList =new ArrayList<>();
+        //  存放从begin到end之间的每天对应的 总订单数量 的集合
+        List<Integer> orderCountList =new ArrayList<>();
+
+        //  统计每天的订单数量
         for (LocalDate date : dateList) {
             LocalDateTime dateBeginTime = LocalDateTime.of(date, LocalTime.MIN);
             LocalDateTime dateEndTime = LocalDateTime.of(date, LocalTime.MAX);
@@ -52,20 +134,53 @@ public class ReportServiceImpl implements ReportService {
             Map map = new HashMap();
             map.put("begin", dateBeginTime);
             map.put("end", dateEndTime);
-            map.put("status",Orders.COMPLETED);
 
-            Double turnover = orderMapper.getSumByMap(map);
+            //  每天的总订单数量
+            Integer dailyOrderCount = orderMapper.getCountByMap(map);
 
-            //  判断当天营业额是否为null，如果是null转换成0
-            turnover=turnover==null?0.0:turnover;
-            turnoverList.add(turnover);
+            map.put("status", Orders.COMPLETED);
+
+            //  每天的有效订单数量
+            Integer daliyValidOrderCount = orderMapper.getCountByMap(map);
+
+            orderCountList.add(dailyOrderCount);
+            validOrderCountList.add(daliyValidOrderCount);
         }
-        StringUtils.join(turnoverList, ",");
 
-        return TurnoverReportVO
+        //  总的订单数量
+        Integer totalOrderCount=orderCountList.stream().reduce(Integer::sum).get();
+        
+        //  总的有效订单数量
+        Integer validOrderCount = validOrderCountList.stream().reduce(Integer::sum).get();
+
+        //  订单完成率
+        Double orderCompletionRate = totalOrderCount != 0 ? validOrderCount.doubleValue() / totalOrderCount : 0.0;
+
+        //  封装 返回结果
+        return OrderReportVO
                 .builder()
                 .dateList(StringUtils.join(dateList, ","))
-                .turnoverList(StringUtils.join(turnoverList, ","))
+                .orderCountList(StringUtils.join(orderCountList, ","))
+                .validOrderCountList(StringUtils.join(validOrderCountList, ","))
+                .totalOrderCount(totalOrderCount)
+                .validOrderCount(validOrderCount)
+                .orderCompletionRate(orderCompletionRate)
                 .build();
+    }
+
+    /**
+     * 根据开始、结束日期获取时间段列表
+     * @param begin
+     * @param end
+     * @return
+     */
+    private List<LocalDate> getDateList(LocalDate begin, LocalDate end) {
+        List<LocalDate> dateList = new ArrayList();
+        dateList.add(begin);
+        while(!begin.equals(end)){
+            begin = begin.plusDays(1);//  begin加一天
+            dateList.add(begin);
+        }
+        return dateList;
     }
 }
