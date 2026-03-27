@@ -4,6 +4,7 @@ import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.sky.constant.MessageConstant;
 import com.sky.constant.StatusConstant;
+import com.sky.context.BaseContext;
 import com.sky.dto.DishDTO;
 import com.sky.dto.DishPageQueryDTO;
 import com.sky.entity.Dish;
@@ -36,31 +37,31 @@ public class DishServiceImpl implements DishService {
     @Autowired
     private SetmealDishMapper setmealDishMapper;
 
+
     /**
-     * 新增菜品和对应的菜品口味
+     * 新增菜品及其口味
      * @param dishDTO
      * @return
      */
+    @Override
     @Transactional
-    public void saveWithFlavor(DishDTO dishDTO){
-
+    public void saveWithFlavor(DishDTO dishDTO) {
         Dish dish = new Dish();
         BeanUtils.copyProperties(dishDTO,dish);
-
-        //向菜品表插入1条数据
         dishMapper.insert(dish);
 
-        //获取insert语句生成的主键值
+        //  当新增菜品插入MySQL后，获得dish自增id
         Long dishId = dish.getId();
 
         List<DishFlavor> flavors = dishDTO.getFlavors();
+
         if(flavors!=null&&flavors.size()>0){
             flavors.forEach(dishFlavor -> {
                 dishFlavor.setDishId(dishId);
             });
-            dishFlavorMapper.insertBatch(flavors);
         }
-        //想口味表插入n条数据
+
+        dishFlavorMapper.insertBatch(flavors);
     }
 
     /**
@@ -73,6 +74,8 @@ public class DishServiceImpl implements DishService {
         PageHelper.startPage(dishPageQueryDTO.getPage(),dishPageQueryDTO.getPageSize());
 
         Page<DishVO> page = dishMapper.pageQuery(dishPageQueryDTO);
+
+        log.info("ThreadLocal测试：打印当前用户ID：{}", BaseContext.getCurrentId());
         return new PageResult(page.getTotal(),page.getResult());
     }
 
@@ -115,18 +118,19 @@ public class DishServiceImpl implements DishService {
     }
 
     /**
-     * 根据id查询菜品和对应的口味数据
+     * 根据id查询菜品以及口味
      * @param id
      * @return
      */
+    @Override
     public DishVO getByIdWithFlavor(Long id) {
-        //1根据id查询菜品数据
+        //  根据菜品id获取菜品信息
         Dish dish = dishMapper.getById(id);
 
-        //2根据id查询口味数据
-        List<DishFlavor> dishFlavors=dishFlavorMapper.getByDishId(id);
+        //  根据菜品id获取其口味信息
+        List<DishFlavor> dishFlavors = dishFlavorMapper.getByDishId(id);
 
-        //3把两部分数据整合到VO中
+        //  把两部分数据封装成VO返回
         DishVO dishVO = new DishVO();
         BeanUtils.copyProperties(dish,dishVO);
         dishVO.setFlavors(dishFlavors);
@@ -182,7 +186,7 @@ public class DishServiceImpl implements DishService {
         dish.setName(name);
         dish.setStatus(StatusConstant.ENABLE);
 
-        System.out.println("搜索关键词：" + dish.getName());
+        //System.out.println("搜索关键词：" + dish.getName());
         return dishMapper.list(dish);
     }
 

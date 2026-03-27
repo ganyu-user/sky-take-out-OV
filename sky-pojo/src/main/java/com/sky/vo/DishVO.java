@@ -12,10 +12,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class DishVO implements Serializable {
+@Builder   // 构建器，依赖全参构造，同时会删掉无参构造，故需以下的全参无参构造
+@NoArgsConstructor   // 生成无参构造
+@AllArgsConstructor  // 生成全参构造
+public class DishVO implements Serializable {  //  序列化接口
 
     private Long id;
     //菜品名称

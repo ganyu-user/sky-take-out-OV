@@ -14,20 +14,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
-import java.awt.*;
 import java.util.List;
 import java.util.Set;
 
-/**
- * 菜品管理
- */
-@Slf4j
 @RestController
-@Api(tags = "Dish(菜品相关接口)")
 @RequestMapping("/admin/dish")
+@Slf4j
+@Api(tags = "dish(菜品相关接口)")
 public class DishController {
+
     @Autowired
     private DishService dishService;
+
     @Autowired
     private RedisTemplate redisTemplate;
 
@@ -45,14 +43,14 @@ public class DishController {
      * @param dishDTO
      * @return
      */
-    @ApiOperation("save(新增菜品)")
     @PostMapping
+    @ApiOperation("save(新增菜品)")
     public Result save(@RequestBody DishDTO dishDTO){
-        log.info("新增菜品：{}",dishDTO);
+        log.info("新增菜品{}",dishDTO);
         dishService.saveWithFlavor(dishDTO);
 
-        //清理redis缓存数据
-        String key = "dish_"+dishDTO.getCategoryId();
+        //  清理redis旧缓存，更新信息
+        String key="dish_"+dishDTO.getCategoryId();
         clearCache(key);
 
         return Result.success();
@@ -66,20 +64,45 @@ public class DishController {
     @GetMapping("/page")
     @ApiOperation("page(菜品分页查询)")
     public Result<PageResult> page(DishPageQueryDTO dishPageQueryDTO){
-        log.info("菜品分页查询：{}",dishPageQueryDTO);
-        PageResult pageResult=dishService.pageQuery(dishPageQueryDTO);
+        log.info("菜品分页查询:{}",dishPageQueryDTO);
+        PageResult pageResult = dishService.pageQuery(dishPageQueryDTO);
         return Result.success(pageResult);
     }
 
     /**
-     * 菜品删除
+     * 根据id查询菜品以及口味
+     * @param id
+     * @return
+     */
+    @GetMapping("/{id}")
+    @ApiOperation("getById(根据id查询菜品以及口味)")
+    public Result<DishVO> getById(@PathVariable Long id){
+        log.info("根据id查询菜品及其口味：{}",id);
+        DishVO dishVO = dishService.getByIdWithFlavor(id);
+        return Result.success(dishVO);
+    }
+
+    /**
+     * 根据分类id查询菜品
+     * @param categoryId
+     * @return
+     */
+    @GetMapping("/list")
+    @ApiOperation("根据分类id查询菜品")
+    public Result<List<Dish>> list(Long categoryId,String name){
+        log.info("根据分类id查询菜品：{},{}",categoryId,name);
+        List<Dish> dishList = dishService.list(categoryId, name);
+        return Result.success(dishList);
+    }
+
+    /**
+     * 批量删除商品
      * @param ids
      * @return
      */
     @DeleteMapping
-    @ApiOperation("delete(菜单删除)")
+    @ApiOperation("批量删除商品")
     public Result delete(@RequestParam List<Long> ids){
-        log.info("菜品批量删除：{}",ids);
         dishService.deleteBatch(ids);
 
         //清理redis缓存数据,清理所有以dish_开头的key
@@ -94,28 +117,12 @@ public class DishController {
      * @return
      */
     @PutMapping
-    @ApiOperation("update(修改菜品信息)")
-    public Result update(@RequestBody DishDTO dishDTO){
-        log.info("修改菜品{}",dishDTO);
+    @ApiOperation("update(修改菜品)")
+    public Result update(DishDTO dishDTO){
+        log.info("修改菜品：{}",dishDTO);
         dishService.updateWithFlavor(dishDTO);
-
-        //清理redis缓存数据,清理所有以dish_开头的key
         clearCache("dish_*");
-
         return Result.success();
-    }
-
-    /**
-     * 根据id查询菜品
-     * @param id
-     * @return
-     */
-    @GetMapping("/{id}")
-    @ApiOperation("getById(根据id查询菜品)")
-    public Result<DishVO> getById(@PathVariable Long id){
-        log.info("根据id查询菜品：{}",id);
-        DishVO dishVO = dishService.getByIdWithFlavor(id);
-        return  Result.success(dishVO);
     }
 
     /**
@@ -124,27 +131,12 @@ public class DishController {
      * @param id
      * @return
      */
-    @PostMapping("/status/{status}")
     @ApiOperation("startOrStop(菜品起售和停售)")
+    @PostMapping("/status/{status}")
     public Result<String> startOrStop(@PathVariable("status") Integer status,Long id){
-        log.info("菜品起售、停售：{},{}",status,id);
+        log.info("修改商品售停状态：{},{}",status,id);
         dishService.startOrStop(status,id);
-
-        //清理redis缓存数据,清理所有以dish_开头的key
         clearCache("dish_*");
-
         return Result.success();
-    }
-
-    /**
-     * 根据分类id查询菜品
-     * @param categoryId
-     * @return
-     */
-    @GetMapping("/list")
-    @ApiOperation("list(根据分类id查询菜品)")
-    public Result<List<Dish>> list(Long categoryId,String name){
-        List<Dish> list = dishService.list(categoryId,name);
-        return Result.success(list);
     }
 }

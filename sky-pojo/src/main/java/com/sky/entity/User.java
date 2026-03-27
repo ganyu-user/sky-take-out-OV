@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class User implements Serializable {
 
+    //  版本号：防止反序列化时因为类修改而报错。
     private static final long serialVersionUID = 1L;
 
     private Long id;
