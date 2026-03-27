@@ -74,8 +74,6 @@ public class DishServiceImpl implements DishService {
         PageHelper.startPage(dishPageQueryDTO.getPage(),dishPageQueryDTO.getPageSize());
 
         Page<DishVO> page = dishMapper.pageQuery(dishPageQueryDTO);
-
-        log.info("ThreadLocal测试：打印当前用户ID：{}", BaseContext.getCurrentId());
         return new PageResult(page.getTotal(),page.getResult());
     }
 

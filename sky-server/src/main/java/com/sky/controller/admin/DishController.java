@@ -65,6 +65,7 @@ public class DishController {
     @ApiOperation("page(菜品分页查询)")
     public Result<PageResult> page(DishPageQueryDTO dishPageQueryDTO){
         log.info("菜品分页查询:{}",dishPageQueryDTO);
+        log.info("测试git");
         PageResult pageResult = dishService.pageQuery(dishPageQueryDTO);
         return Result.success(pageResult);
     }
