@@ -1,5 +1,7 @@
 package com.sky.controller.user;
 
+import com.sky.cache.CachePreheatService;
+import com.sky.cache.CacheSyncService;
 import com.sky.constant.StatusConstant;
 import com.sky.entity.Dish;
 import com.sky.result.Result;
@@ -9,10 +11,10 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
 import java.util.List;
 
 @RestController("userDishController")
@@ -22,11 +24,16 @@ import java.util.List;
 public class DishController {
     @Autowired
     private DishService dishService;
+
     @Autowired
-    private RedisTemplate redisTemplate;
+    private CacheSyncService cacheSyncService;
+
+    @Autowired
+    private CachePreheatService cachePreheatService;
 
     /**
      * 根据分类id查询菜品
+     * 使用多级缓存：Caffeine本地缓存 + Redis分布式缓存
      *
      * @param categoryId
      * @return
@@ -34,27 +41,28 @@ public class DishController {
     @GetMapping("/list")
     @ApiOperation("根据分类id查询菜品")
     public Result<List<DishVO>> list(Long categoryId) {
+        log.info("查询菜品 - 分类ID: {}", categoryId);
 
-        //构造redis中的key，采用“ dish_categoryId ”
-        String key = "dish_"+ categoryId;
+        // 使用CacheHelper手动操作缓存
+        List<DishVO> list = cacheSyncService.get(
+                CachePreheatService.DISH_CACHE,
+                String.valueOf(categoryId),
+                List.class);
 
-        //查询redis中是否存在菜品数据
-        List<DishVO> list = (List<DishVO>) redisTemplate.opsForValue().get(key);
-        //如果存在，直接返回，无需在数据库中查询
-        if(list != null&& list.size()>0) {
-            return Result.success(list);
+        if (list == null) {
+            // 缓存未命中，查询数据库
+            Dish dish = new Dish();
+            dish.setCategoryId(categoryId);
+            dish.setStatus(StatusConstant.ENABLE);
+            list = dishService.listWithFlavor(dish);
+
+            // 放入缓存
+            cacheSyncService.put(
+                    CachePreheatService.DISH_CACHE,
+                    String.valueOf(categoryId),
+                    list);
         }
-
-        //如果不存在，就查询数据库
-        Dish dish = new Dish();
-        dish.setCategoryId(categoryId);
-        dish.setStatus(StatusConstant.ENABLE);//查询起售中的菜品
-        list = dishService.listWithFlavor(dish);
-
-        //将查询到的数据放入redis中,以供下次查询使用
-        redisTemplate.opsForValue().set(key, list);
 
         return Result.success(list);
     }
-
 }

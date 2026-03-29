@@ -61,7 +61,7 @@ public class ReportServiceImpl implements ReportService {
             LocalDateTime dateEndTime = LocalDateTime.of(date, LocalTime.MAX);  //  获取一天结束的时间
 
             //  把三个参数封装成 map
-            Map map = new HashMap();
+            Map<String, Object> map = new HashMap<>();
             map.put("begin", dateBeginTime);
             map.put("end", dateEndTime);
             map.put("status",Orders.COMPLETED); //状态为5（已完成）
@@ -101,7 +101,7 @@ public class ReportServiceImpl implements ReportService {
             LocalDateTime dateEndTime = LocalDateTime.of(date, LocalTime.MAX);  //  获取一天结束的时间
 
             //  封装成 map
-            Map map = new HashMap();
+            Map<String, Object> map = new HashMap<>();
             map.put("end", dateEndTime);
 
             //  总用户数量
@@ -143,7 +143,7 @@ public class ReportServiceImpl implements ReportService {
             LocalDateTime dateBeginTime = LocalDateTime.of(date, LocalTime.MIN);
             LocalDateTime dateEndTime = LocalDateTime.of(date, LocalTime.MAX);
 
-            Map map = new HashMap();
+            Map<String, Object> map = new HashMap<>();
             map.put("begin", dateBeginTime);
             map.put("end", dateEndTime);
 
@@ -209,7 +209,7 @@ public class ReportServiceImpl implements ReportService {
      * @return
      */
     private List<LocalDate> getDateList(LocalDate begin, LocalDate end) {
-        List<LocalDate> dateList = new ArrayList();
+        List<LocalDate> dateList = new ArrayList<>();
         dateList.add(begin);
         while(!begin.equals(end)){
             begin = begin.plusDays(1);//  begin加一天

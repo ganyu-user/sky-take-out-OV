@@ -1,5 +1,7 @@
 package com.sky.controller.admin;
 
+import com.sky.cache.CachePreheatService;
+import com.sky.cache.CacheSyncService;
 import com.sky.dto.DishDTO;
 import com.sky.dto.DishPageQueryDTO;
 import com.sky.entity.Dish;
@@ -11,11 +13,10 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Set;
 
 @RestController
 @RequestMapping("/admin/dish")
@@ -27,31 +28,26 @@ public class DishController {
     private DishService dishService;
 
     @Autowired
-    private RedisTemplate redisTemplate;
+    private CacheSyncService cacheSyncService;
 
-    /**
-     * 清理redis旧缓存，保持与数据库数据一致
-     * @param pattern
-     */
-    private void clearCache(String pattern){
-        Set keys = redisTemplate.keys(pattern);
-        redisTemplate.delete(keys);
-    }
+    @Autowired
+    private CachePreheatService cachePreheatService;
 
     /**
      * 新增菜品
+     * 清除该分类的菜品缓存
      * @param dishDTO
      * @return
      */
     @PostMapping
     @ApiOperation("save(新增菜品)")
+    @CacheEvict(cacheNames = CachePreheatService.DISH_CACHE, key = "#dishDTO.categoryId")
     public Result save(@RequestBody DishDTO dishDTO){
         log.info("新增菜品{}",dishDTO);
         dishService.saveWithFlavor(dishDTO);
 
-        //  清理redis旧缓存，更新信息
-        String key="dish_"+dishDTO.getCategoryId();
-        clearCache(key);
+        // 重新预热该分类的菜品缓存
+        cachePreheatService.preheatDishByCategory(dishDTO.getCategoryId());
 
         return Result.success();
     }
@@ -65,7 +61,6 @@ public class DishController {
     @ApiOperation("page(菜品分页查询)")
     public Result<PageResult> page(DishPageQueryDTO dishPageQueryDTO){
         log.info("菜品分页查询:{}",dishPageQueryDTO);
-        log.info("测试git");
         PageResult pageResult = dishService.pageQuery(dishPageQueryDTO);
         return Result.success(pageResult);
     }
@@ -98,46 +93,61 @@ public class DishController {
 
     /**
      * 批量删除商品
+     * 清除所有菜品缓存
      * @param ids
      * @return
      */
     @DeleteMapping
     @ApiOperation("批量删除商品")
+    @CacheEvict(cacheNames = CachePreheatService.DISH_CACHE, allEntries = true)
     public Result delete(@RequestParam List<Long> ids){
         dishService.deleteBatch(ids);
 
-        //清理redis缓存数据,清理所有以dish_开头的key
-        clearCache("dish_*");
+        // 清除所有菜品缓存
+        cacheSyncService.clear(CachePreheatService.DISH_CACHE);
 
         return Result.success();
     }
 
     /**
      * 修改菜品
+     * 清除所有菜品缓存
      * @param dishDTO
      * @return
      */
     @PutMapping
     @ApiOperation("update(修改菜品)")
-    public Result update(DishDTO dishDTO){
+    @CacheEvict(cacheNames = CachePreheatService.DISH_CACHE, allEntries = true)
+    public Result update(@RequestBody DishDTO dishDTO){
         log.info("修改菜品：{}",dishDTO);
         dishService.updateWithFlavor(dishDTO);
-        clearCache("dish_*");
+
+        // 清除所有菜品缓存
+        cacheSyncService.clear(CachePreheatService.DISH_CACHE);
+
+        // 重新预热该分类的菜品缓存
+        cachePreheatService.preheatDishByCategory(dishDTO.getCategoryId());
+
         return Result.success();
     }
 
     /**
      * 菜品起售或停售
+     * 清除所有菜品缓存
      * @param status
      * @param id
      * @return
      */
     @ApiOperation("startOrStop(菜品起售和停售)")
     @PostMapping("/status/{status}")
+    @CacheEvict(cacheNames = CachePreheatService.DISH_CACHE, allEntries = true)
     public Result<String> startOrStop(@PathVariable("status") Integer status,Long id){
         log.info("修改商品售停状态：{},{}",status,id);
         dishService.startOrStop(status,id);
-        clearCache("dish_*");
+
+        // 清除所有菜品缓存
+        cacheSyncService.clear(CachePreheatService.DISH_CACHE);
+
         return Result.success();
     }
 }
