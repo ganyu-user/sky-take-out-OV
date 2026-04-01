@@ -1,9 +1,5 @@
 package com.sky.controller.user;
 
-import com.sky.cache.CachePreheatService;
-import com.sky.cache.CacheSyncService;
-import com.sky.constant.StatusConstant;
-import com.sky.entity.Setmeal;
 import com.sky.result.Result;
 import com.sky.service.SetmealService;
 import com.sky.vo.DishItemVO;
@@ -17,57 +13,38 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * C端-套餐浏览接口
+ * 缓存实现在Service层，避免Controller层缓存Result包装类导致的序列化问题
+ */
 @RestController("userSetmealController")
 @RequestMapping("/user/setmeal")
 @Api(tags = "C端-套餐浏览接口")
 public class SetmealController {
+
     @Autowired
     private SetmealService setmealService;
 
-    @Autowired
-    private CacheSyncService cacheSyncService;
-
-    @Autowired
-    private CachePreheatService cachePreheatService;
-
     /**
-     * 条件查询
-     * 使用多级缓存：Caffeine本地缓存 + Redis分布式缓存
+     * 根据分类id查询套餐
+     * 缓存逻辑在SetmealService.listByCategoryId方法中实现
      *
-     * @param categoryId
-     * @return
+     * @param categoryId 分类ID
+     * @return 套餐列表
      */
     @GetMapping("/list")
     @ApiOperation("根据分类id查询套餐")
-    public Result<List<Setmeal>> list(Long categoryId) {
-        // 使用CacheHelper手动操作缓存
-        List<Setmeal> list = cacheSyncService.get(
-                CachePreheatService.SETMEAL_CACHE,
-                String.valueOf(categoryId),
-                List.class);
-
-        if (list == null) {
-            // 缓存未命中，查询数据库
-            Setmeal setmeal = new Setmeal();
-            setmeal.setCategoryId(categoryId);
-            setmeal.setStatus(StatusConstant.ENABLE);
-            list = setmealService.list(setmeal);
-
-            // 放入缓存
-            cacheSyncService.put(
-                    CachePreheatService.SETMEAL_CACHE,
-                    String.valueOf(categoryId),
-                    list);
-        }
-
+    public Result<List<com.sky.entity.Setmeal>> list(Long categoryId) {
+        List<com.sky.entity.Setmeal> list = setmealService.listByCategoryId(categoryId);
         return Result.success(list);
     }
 
     /**
      * 根据套餐id查询包含的菜品列表
+     * 此接口不缓存（数据可能经常变动）
      *
-     * @param id
-     * @return
+     * @param id 套餐ID
+     * @return 菜品列表
      */
     @GetMapping("/dish/{id}")
     @ApiOperation("根据套餐id查询包含的菜品列表")

@@ -15,7 +15,7 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 /**
- * 配置类：用于创建Redis对象
+ * 配置类，用于创建Redis对象
  */
 @Configuration
 @Slf4j
@@ -23,39 +23,41 @@ public class RedisConfiguration {
 
     /**
      * 配置RedisTemplate用于对象缓存（支持多级缓存）
-     * 使用@Primary标记，优先使用此配置
+     * 使用Primary标记，优先使用此配置
+     * @return
      */
     @Bean
     @Primary
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
+    public RedisTemplate<String,Object> redisTemplate(RedisConnectionFactory redisConnectionFactory){
         log.info("开始创建Redis对象缓存模板...");
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
 
-        // 设置redis的连接工厂对象
+        // 设置redis的连接厂对象
         redisTemplate.setConnectionFactory(redisConnectionFactory);
 
-        // 创建JSON序列化器
+        //  创建JSON序列化器
         ObjectMapper objectMapper = new ObjectMapper();
-        // 注册Java 8日期时间模块
+        //  注册java 8日期时间模块
         objectMapper.registerModule(new JavaTimeModule());
-        // 禁用日期时间戳写入（使用ISO格式）
+        //  禁用日期时间戳写入（用ISO格式）
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
         objectMapper.activateDefaultTyping(
-            LaissezFaireSubTypeValidator.instance,
-            ObjectMapper.DefaultTyping.NON_FINAL,
-            JsonTypeInfo.As.PROPERTY
+                LaissezFaireSubTypeValidator.instance, // 允许任何类都能被 序列化/反序列化
+                ObjectMapper.DefaultTyping.NON_FINAL,   //  对非final对象加标识，自创对象需要标识
+                JsonTypeInfo.As.PROPERTY  //  把类名作为属性封装进JSON
         );
-        GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);
+        GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(objectMapper);
 
         // 设置key的序列化器
-        redisTemplate.setKeySerializer(new StringRedisSerializer());
-        redisTemplate.setHashKeySerializer(new StringRedisSerializer());
+        redisTemplate.setKeySerializer((new StringRedisSerializer()));
+        redisTemplate.setHashKeySerializer((new StringRedisSerializer()));
 
         // 设置value的序列化器
-        redisTemplate.setValueSerializer(jsonSerializer);
-        redisTemplate.setHashValueSerializer(jsonSerializer);
+        redisTemplate.setValueSerializer(serializer);
+        redisTemplate.setHashValueSerializer(serializer);
 
-        redisTemplate.afterPropertiesSet();
         return redisTemplate;
     }
 }
+

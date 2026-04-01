@@ -58,6 +58,13 @@ public interface SetmealService {
     List<Setmeal> list(Setmeal setmeal);
 
     /**
+     * 根据分类id查询套餐 - 带多级缓存
+     * @param categoryId 分类ID
+     * @return 套餐列表
+     */
+    List<Setmeal> listByCategoryId(Long categoryId);
+
+    /**
      * 根据id查询菜品选项
      * @param id
      * @return

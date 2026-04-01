@@ -1,9 +1,5 @@
 package com.sky.controller.user;
 
-import com.sky.cache.CachePreheatService;
-import com.sky.cache.CacheSyncService;
-import com.sky.constant.StatusConstant;
-import com.sky.entity.Dish;
 import com.sky.result.Result;
 import com.sky.service.DishService;
 import com.sky.vo.DishVO;
@@ -17,52 +13,34 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * C端-菜品浏览接口
+ * 缓存实现在Service层，避免Controller层缓存Result包装类导致的序列化问题
+ */
 @RestController("userDishController")
 @RequestMapping("/user/dish")
 @Slf4j
 @Api(tags = "C端-菜品浏览接口")
 public class DishController {
+
     @Autowired
     private DishService dishService;
 
-    @Autowired
-    private CacheSyncService cacheSyncService;
-
-    @Autowired
-    private CachePreheatService cachePreheatService;
-
     /**
      * 根据分类id查询菜品
-     * 使用多级缓存：Caffeine本地缓存 + Redis分布式缓存
+     * 缓存逻辑在DishService.listWithFlavor方法中实现
      *
-     * @param categoryId
-     * @return
+     * @param categoryId 分类ID
+     * @return 菜品列表
      */
     @GetMapping("/list")
     @ApiOperation("根据分类id查询菜品")
     public Result<List<DishVO>> list(Long categoryId) {
         log.info("查询菜品 - 分类ID: {}", categoryId);
 
-        // 使用CacheHelper手动操作缓存
-        List<DishVO> list = cacheSyncService.get(
-                CachePreheatService.DISH_CACHE,
-                String.valueOf(categoryId),
-                List.class);
+        List<DishVO> list = dishService.listWithFlavor(categoryId);
 
-        if (list == null) {
-            // 缓存未命中，查询数据库
-            Dish dish = new Dish();
-            dish.setCategoryId(categoryId);
-            dish.setStatus(StatusConstant.ENABLE);
-            list = dishService.listWithFlavor(dish);
-
-            // 放入缓存
-            cacheSyncService.put(
-                    CachePreheatService.DISH_CACHE,
-                    String.valueOf(categoryId),
-                    list);
-        }
-
+        log.info("查询完成 - 分类ID: {}, 结果数量: {}", categoryId, list != null ? list.size() : 0);
         return Result.success(list);
     }
 }

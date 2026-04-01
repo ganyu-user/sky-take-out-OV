@@ -2,6 +2,7 @@ package com.sky.service.impl;
 
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
+import com.sky.cache.CachePreheatService;
 import com.sky.constant.MessageConstant;
 import com.sky.constant.StatusConstant;
 import com.sky.context.BaseContext;
@@ -19,6 +20,8 @@ import com.sky.vo.DishVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,11 +43,13 @@ public class DishServiceImpl implements DishService {
 
     /**
      * 新增菜品及其口味
+     * 清除菜品缓存，保证数据一致性
      * @param dishDTO
      * @return
      */
     @Override
     @Transactional
+    @CacheEvict(cacheNames = CachePreheatService.DISH_CACHE, allEntries = true)
     public void saveWithFlavor(DishDTO dishDTO) {
         Dish dish = new Dish();
         BeanUtils.copyProperties(dishDTO,dish);
@@ -79,9 +84,11 @@ public class DishServiceImpl implements DishService {
 
     /**
      * 菜品批量删除
+     * 清除菜品缓存，保证数据一致性
      * @param ids
      */
     @Transactional
+    @CacheEvict(cacheNames = CachePreheatService.DISH_CACHE, allEntries = true)
     public void deleteBatch(List<Long> ids) {
         //判断当前菜品是否能被删除--停售或起售，起售不可删除
         for (Long id : ids) {
@@ -138,8 +145,10 @@ public class DishServiceImpl implements DishService {
 
     /**
      * 菜品修改
+     * 清除菜品缓存，保证数据一致性
      * @param dishDTO
      */
+    @CacheEvict(cacheNames = CachePreheatService.DISH_CACHE, allEntries = true)
     public void updateWithFlavor(DishDTO dishDTO){
         //摘除DTO中的口味信息
         Dish dish = new Dish();
@@ -164,9 +173,11 @@ public class DishServiceImpl implements DishService {
 
     /**
      * 菜品起售、停售
+     * 清除菜品缓存，保证数据一致性
      * @param status
      * @param id
      */
+    @CacheEvict(cacheNames = CachePreheatService.DISH_CACHE, allEntries = true)
     public void startOrStop(Integer status, Long id) {
         Dish dish = Dish.builder().id(id).status(status).build();
         dishMapper.update(dish);
@@ -210,5 +221,29 @@ public class DishServiceImpl implements DishService {
         }
 
         return dishVOList;
+    }
+
+    /**
+     * 用户端业务
+     * 根据分类id查询菜品（带口味）- 带多级缓存
+     * 使用@Cacheable实现多级缓存：本地缓存(Caffeine) + Redis
+     *
+     * @param categoryId 分类ID
+     * @return 菜品列表
+     */
+    @Override
+    @Cacheable(
+            cacheNames = CachePreheatService.DISH_CACHE,
+            key = "#categoryId",
+            unless = "#result == null || #result.isEmpty()"
+    )
+    public List<DishVO> listWithFlavor(Long categoryId) {
+        log.info("缓存未命中，查询数据库 - 分类ID: {}", categoryId);
+
+        Dish dish = new Dish();
+        dish.setCategoryId(categoryId);
+        dish.setStatus(StatusConstant.ENABLE);
+
+        return this.listWithFlavor(dish);
     }
 }

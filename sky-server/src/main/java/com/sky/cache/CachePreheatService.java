@@ -16,6 +16,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -51,6 +52,9 @@ public class CachePreheatService implements ApplicationRunner {
     @Autowired
     private SetmealService setmealService;
 
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+
     // 缓存名称常量
     public static final String DISH_CACHE = "dishCache";
     public static final String SETMEAL_CACHE = "setmealCache";
@@ -62,20 +66,68 @@ public class CachePreheatService implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         log.info("========== 开始缓存预热 ==========");
-        
+
         try {
+            // 先清理Redis中的旧缓存数据（避免旧格式数据导致反序列化错误）
+            clearOldCache();
+
             // 预热分类缓存
             preheatCategoryCache();
-            
+
             // 预热菜品缓存
             preheatDishCache();
-            
+
             // 预热套餐缓存
             preheatSetmealCache();
-            
+
             log.info("========== 缓存预热完成 ==========");
         } catch (Exception e) {
             log.error("缓存预热失败: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 清理Redis中的旧缓存数据
+     * 避免之前存储的Result包装类格式数据导致反序列化错误
+     */
+    private void clearOldCache() {
+        log.info("清理Redis旧缓存数据...");
+        try {
+            // 删除菜品缓存相关的所有key
+            org.springframework.data.redis.core.Cursor<byte[]> dishCursor = redisTemplate.executeWithStickyConnection(
+                connection -> connection.scan(
+                    org.springframework.data.redis.core.ScanOptions.scanOptions()
+                        .match(DISH_CACHE + ":*")
+                        .build()
+                )
+            );
+            if (dishCursor != null) {
+                while (dishCursor.hasNext()) {
+                    String key = new String(dishCursor.next());
+                    redisTemplate.delete(key);
+                }
+                dishCursor.close();
+            }
+
+            // 删除套餐缓存相关的所有key
+            org.springframework.data.redis.core.Cursor<byte[]> setmealCursor = redisTemplate.executeWithStickyConnection(
+                connection -> connection.scan(
+                    org.springframework.data.redis.core.ScanOptions.scanOptions()
+                        .match(SETMEAL_CACHE + ":*")
+                        .build()
+                )
+            );
+            if (setmealCursor != null) {
+                while (setmealCursor.hasNext()) {
+                    String key = new String(setmealCursor.next());
+                    redisTemplate.delete(key);
+                }
+                setmealCursor.close();
+            }
+
+            log.info("Redis旧缓存数据清理完成");
+        } catch (Exception e) {
+            log.warn("清理Redis旧缓存数据失败: {}", e.getMessage());
         }
     }
 

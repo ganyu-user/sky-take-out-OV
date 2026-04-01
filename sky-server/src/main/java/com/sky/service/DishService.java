@@ -55,6 +55,13 @@ public interface DishService {
     List<DishVO> listWithFlavor(Dish dish);
 
     /**
+     * 根据分类id查询菜品（带口味）- 带多级缓存
+     * @param categoryId 分类ID
+     * @return 菜品列表
+     */
+    List<DishVO> listWithFlavor(Long categoryId);
+
+    /**
      * 新增菜品以及口味
      * @param dishDTO
      * @return

@@ -2,6 +2,7 @@ package com.sky.service.impl;
 
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
+import com.sky.cache.CachePreheatService;
 import com.sky.constant.MessageConstant;
 import com.sky.constant.StatusConstant;
 import com.sky.dto.SetmealDTO;
@@ -21,10 +22,11 @@ import com.sky.vo.SetmealVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.awt.*;
 import java.util.List;
 
 @Service
@@ -41,8 +43,10 @@ public class SetmealServiceImpl implements SetmealService {
 
     /**
      * 新增套餐，同时保存套餐与菜品的关联关系
+     * 清除套餐缓存，保证数据一致性
      * @param setmealDTO
      */
+    @CacheEvict(cacheNames = CachePreheatService.SETMEAL_CACHE, allEntries = true)
     public void saveWithDish(SetmealDTO setmealDTO) {
         //把DTO复制给setmeal实体
         Setmeal setmeal = new Setmeal();
@@ -78,9 +82,11 @@ public class SetmealServiceImpl implements SetmealService {
 
     /**
      * 批量删除套餐
+     * 清除套餐缓存，保证数据一致性
      * @param ids
      */
     @Transactional
+    @CacheEvict(cacheNames = CachePreheatService.SETMEAL_CACHE, allEntries = true)
     public void deleteBatch(List<Long> ids) {
         ids.forEach(id -> {
             //根据id获得套餐数据
@@ -116,10 +122,12 @@ public class SetmealServiceImpl implements SetmealService {
 
     /**
      * 修改套餐
+     * 清除套餐缓存，保证数据一致性
      * @param setmealDTO
      * @return
      */
     @Transactional
+    @CacheEvict(cacheNames = CachePreheatService.SETMEAL_CACHE, allEntries = true)
     public void update(SetmealDTO setmealDTO) {
         Setmeal setmeal = new Setmeal();
         BeanUtils.copyProperties(setmealDTO, setmeal);
@@ -143,9 +151,11 @@ public class SetmealServiceImpl implements SetmealService {
 
     /**
      * 套餐起售停售
+     * 清除套餐缓存，保证数据一致性
      * @param status
      * @param id
      */
+    @CacheEvict(cacheNames = CachePreheatService.SETMEAL_CACHE, allEntries = true)
     public void startOrStop(Integer status, Long id) {
         //起售套餐时，判断套餐内是否有停售菜品，有停售菜品提示"套餐内包含未启售菜品，无法启售"
         if (status==StatusConstant.ENABLE) {
@@ -171,6 +181,29 @@ public class SetmealServiceImpl implements SetmealService {
     public List<Setmeal> list(Setmeal setmeal) {
         List<Setmeal> list = setmealMapper.list(setmeal);
         return list;
+    }
+
+    /**
+     * 根据分类id查询套餐 - 带多级缓存
+     * 使用@Cacheable实现多级缓存：本地缓存(Caffeine) + Redis
+     *
+     * @param categoryId 分类ID
+     * @return 套餐列表
+     */
+    @Override
+    @Cacheable(
+            cacheNames = CachePreheatService.SETMEAL_CACHE,
+            key = "#categoryId",
+            unless = "#result == null || #result.isEmpty()"
+    )
+    public List<Setmeal> listByCategoryId(Long categoryId) {
+        log.info("缓存未命中，查询数据库 - 套餐分类ID: {}", categoryId);
+
+        Setmeal setmeal = new Setmeal();
+        setmeal.setCategoryId(categoryId);
+        setmeal.setStatus(StatusConstant.ENABLE);
+
+        return this.list(setmeal);
     }
 
     /**
