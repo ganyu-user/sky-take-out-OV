@@ -25,6 +25,10 @@ import com.sky.vo.OrderVO;
 import com.sky.websocket.WebSocketServer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import com.sky.config.RabbitMQConfiguration;
+import com.sky.pojo.OrderMessage;
+import com.sky.utils.SnowflakeIdUtil;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -56,6 +60,11 @@ public class OrderServiceImpl implements OrderService {
     private WeChatPayUtil weChatPayUtil;
     @Autowired
     private WebSocketServer webSocketServer;
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+    @Autowired
+    private SnowflakeIdUtil snowflakeIdUtil;
+
     @Value("${sky.shop.address}")
     private String shopAddress;
     @Value("${sky.baidu.ak}")
@@ -68,63 +77,85 @@ public class OrderServiceImpl implements OrderService {
      */
     @Transactional
     public OrderSubmitVO submitOrder(OrdersSubmitDTO ordersSubmitDTO) {
-        //1.处理业务异常（判断地址簿是否为空）
+        // 1.处理业务异常（判断地址簿是否为空）
         AddressBook addressBook = addressBookMapper.getById(ordersSubmitDTO.getAddressBookId());
         if (addressBook == null) {
-            //抛出业务异常
             throw new AddressBookBusinessException(MessageConstant.ADDRESS_BOOK_IS_NULL);
         }
 
-        //判断用户收货地址是否超出配送范围
-        checkOutOfRange(addressBook.getCityName()+addressBook.getDistrictName()+addressBook.getDetail());
+        // 2.判断用户收货地址是否超出配送范围
+        checkOutOfRange(addressBook.getCityName() + addressBook.getDistrictName() + addressBook.getDetail());
 
-        //2.处理业务异常（判断购物车是否为空）
+        // 3.处理业务异常（判断购物车是否为空）
         Long userId = BaseContext.getCurrentId();
         ShoppingCart shoppingCart = new ShoppingCart();
         shoppingCart.setUserId(userId);
 
         List<ShoppingCart> shoppingCartList = shoppingCartMapper.list(shoppingCart);
-        if (shoppingCartList == null || shoppingCartList.size() == 0) {
+        if (shoppingCartList == null || shoppingCartList.isEmpty()) {
             throw new ShoppingCartBusinessException(MessageConstant.SHOPPING_CART_IS_NULL);
         }
 
-        //3.向订单表插入一条数据
-        Orders  orders = new Orders();//创建订单实体
-        BeanUtils.copyProperties(ordersSubmitDTO, orders);//把DTO里面的数据复制到实体
-        //剩下的逐个封装
+        // 4.向订单表插入一条数据（同步创建，保证能立即支付）
+        Orders orders = new Orders();
+        BeanUtils.copyProperties(ordersSubmitDTO, orders);
         orders.setUserId(userId);
         orders.setOrderTime(LocalDateTime.now());
         orders.setPayStatus(orders.UN_PAID);
         orders.setStatus(orders.PENDING_PAYMENT);
-        orders.setNumber(String.valueOf(System.currentTimeMillis()));
+            //  使用雪花算法生成订单号
+        orders.setNumber(String.valueOf(snowflakeIdUtil.nextId()));
         orders.setPhone(addressBook.getPhone());
         orders.setConsignee(addressBook.getConsignee());
+        orders.setAddress(addressBook.getProvinceName() + addressBook.getCityName() + addressBook.getDistrictName() + addressBook.getDetail());
 
         orderMapper.insert(orders);
 
-        //4.向订单明细表插入n条数据
-        List<OrderDetail> orderDetailList = new ArrayList<>();//设置一个订单明细列表
+        // 5.向订单明细表插入n条数据
+        List<OrderDetail> orderDetailList = new ArrayList<>();
         for (ShoppingCart cart : shoppingCartList) {
-            OrderDetail  orderDetail = new OrderDetail();//创建订单明细实体
-            BeanUtils.copyProperties(cart, orderDetail);//把购物车的一个商品信息复制给一个实体
-            orderDetail.setOrderId(orders.getId());//设置当前明细关联的订单id
-            orderDetailList.add(orderDetail);//把所有订单明细封装成一个列表
+            OrderDetail orderDetail = new OrderDetail();
+            BeanUtils.copyProperties(cart, orderDetail);
+            orderDetail.setOrderId(orders.getId());
+            orderDetailList.add(orderDetail);
         }
+        orderDetailMapper.insertBatch(orderDetailList);
 
-        orderDetailMapper.insertBatch(orderDetailList);//批量插入明细数据
-
-        //5.清空当前用户购物车数据
+        // 6.清空当前用户购物车数据
         shoppingCartMapper.cleanByUserId(userId);
 
-        //6.封装VO返回结果
-        OrderSubmitVO orderSubmitVO = OrderSubmitVO.builder()
+        // 7.发送MQ消息通知商家有新订单（异步，不阻塞）
+        OrderMessage orderMessage = OrderMessage.builder()
+                .userId(userId)
+                .addressBookId(ordersSubmitDTO.getAddressBookId())
+                .amount(orders.getAmount())
+                .remark(ordersSubmitDTO.getRemark())
+                .estimatedDeliveryTime(ordersSubmitDTO.getEstimatedDeliveryTime())
+                .packAmount(ordersSubmitDTO.getPackAmount())
+                .tablewareNumber(ordersSubmitDTO.getTablewareNumber())
+                .tablewareStatus(ordersSubmitDTO.getTablewareStatus())
+                .phone(addressBook.getPhone())
+                .consignee(addressBook.getConsignee())
+                .address(orders.getAddress())
+                .orderId(orders.getId())
+                .orderNumber(orders.getNumber())
+                .build();
+
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfiguration.ORDER_EXCHANGE,
+                RabbitMQConfiguration.ORDER_ROUTING_KEY,
+                orderMessage
+        );
+
+        log.info("【订单提交】订单已创建，MQ消息已发送，订单号：{}", orders.getNumber());
+
+        // 8.返回订单信息
+        return OrderSubmitVO.builder()
                 .id(orders.getId())
                 .orderNumber(orders.getNumber())
                 .orderAmount(orders.getAmount())
                 .orderTime(orders.getOrderTime())
                 .build();
-
-        return orderSubmitVO;
     }
 
     /**
@@ -255,7 +286,6 @@ public class OrderServiceImpl implements OrderService {
         BeanUtils.copyProperties(orders, orderVO);
         orderVO.setOrderDetailList(orderDetailList);
 
-        //TODO orderVO里面没有地址参数，用户端订单详情页面没有显示地址
         return orderVO;
     }
 

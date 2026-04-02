@@ -55,9 +55,6 @@ public class OrderController {
     @GetMapping("/details/{id}")
     public Result<OrderVO> details(@PathVariable("id") Long id){
         OrderVO orderVO=orderService.detail(id);
-
-        //TODO ordervo里面没有地址参数，前端没有地址信息
-
         return Result.success(orderVO);
     }
 

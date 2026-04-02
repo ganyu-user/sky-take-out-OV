@@ -31,3 +31,9 @@ sky:
     address: 广东省肇庆市端州区星湖国际广场4楼
   baidu:
     ak: VGrEqzeRWEiq0tyhRHd6jN7UZ8ABhKf2
+  #  对rabbitmq进行参数配置
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
