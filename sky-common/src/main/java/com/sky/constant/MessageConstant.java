@@ -25,4 +25,6 @@ public class MessageConstant {
     public static final String ORDER_STATUS_ERROR = "订单状态错误";
     public static final String ORDER_NOT_FOUND = "订单不存在";
 
+    public static final String EMPLOYEE_NOT_FOUND = "员工不存在";
+    public static final String NEWPASSWORD_NOT_SAME_AS_OLD ="新密码不能与旧密码相同";
 }

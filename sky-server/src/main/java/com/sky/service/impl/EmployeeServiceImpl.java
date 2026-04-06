@@ -10,9 +10,11 @@ import com.sky.context.BaseContext;
 import com.sky.dto.EmployeeDTO;
 import com.sky.dto.EmployeeLoginDTO;
 import com.sky.dto.EmployeePageQueryDTO;
+import com.sky.dto.PasswordEditDTO;
 import com.sky.entity.Employee;
 import com.sky.exception.AccountLockedException;
 import com.sky.exception.AccountNotFoundException;
+import com.sky.exception.PasswordEditFailedException;
 import com.sky.exception.PasswordErrorException;
 import com.sky.mapper.EmployeeMapper;
 import com.sky.result.PageResult;
@@ -51,7 +53,6 @@ public class EmployeeServiceImpl implements EmployeeService {
         }
 
         //密码比对
-        // TODO 后期需要进行md5加密，然后再进行比对
         password= DigestUtils.md5DigestAsHex(password.getBytes());
         if (!password.equals(employee.getPassword())) {
             //密码错误
@@ -146,6 +147,38 @@ public class EmployeeServiceImpl implements EmployeeService {
         //设置修改人和修改时间
         //employee.setUpdateTime(LocalDateTime.now());
         //employee.setUpdateUser(BaseContext.getCurrentId());
+        employeeMapper.update(employee);
+    }
+
+    /**
+     * 员工修改登录密码
+     * @param passwordEditDTO
+     * @return
+     */
+    @Override
+    public void editPassword(PasswordEditDTO passwordEditDTO) {
+        String oldPassword = passwordEditDTO.getOldPassword();
+        String newPassword = passwordEditDTO.getNewPassword();
+
+        // 判断新旧密码是否相同
+        if (oldPassword.equals(newPassword)) {
+            throw new PasswordEditFailedException(MessageConstant.NEWPASSWORD_NOT_SAME_AS_OLD);
+        }
+
+        Long empId = BaseContext.getCurrentId();
+        Employee employee = employeeMapper.getById(empId);
+        if (employee == null) {
+            throw new AccountNotFoundException(MessageConstant.EMPLOYEE_NOT_FOUND);
+        }
+
+        // 判断旧密码与原密码是否一致
+        String password = employee.getPassword();
+        oldPassword = DigestUtils.md5DigestAsHex(oldPassword.getBytes());
+        if (!password.equals(oldPassword)) {
+            throw new PasswordErrorException(MessageConstant.PASSWORD_ERROR);
+        }
+
+        employee.setPassword(DigestUtils.md5DigestAsHex(newPassword.getBytes()));
         employeeMapper.update(employee);
     }
 }
