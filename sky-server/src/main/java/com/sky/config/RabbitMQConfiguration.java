@@ -74,34 +74,17 @@ public class RabbitMQConfiguration {
     }
 
     /**
-     * 配置ObjectMapper
-     * 用于Spring AMQP的消息序列化/反序列化
-     * 注册JavaTimeModule支持LocalDateTime等Java8时间类型
-     *
-     * @return 配置好的ObjectMapper
-     */
-    @Bean
-    public ObjectMapper objectMapper() {
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        return objectMapper;
-    }
-
-    /**
      * 配置RabbitTemplate（消息发送模板）
      * RabbitTemplate用于发送消息到RabbitMQ
      * 配置Jackson2JsonMessageConverter实现对象与JSON的自动转换
      *
      * @param connectionFactory RabbitMQ连接工厂
-     * @param objectMapper JSON序列化工具
      * @return 配置好的RabbitTemplate
      */
     @Bean
-    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory, ObjectMapper objectMapper) {
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
         RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
-        Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter(objectMapper);
-        rabbitTemplate.setMessageConverter(converter);
+        rabbitTemplate.setMessageConverter(new Jackson2JsonMessageConverter());
         return rabbitTemplate;
     }
 
@@ -111,17 +94,14 @@ public class RabbitMQConfiguration {
      * 配置Jackson2JsonMessageConverter实现消息的反序列化
      *
      * @param connectionFactory RabbitMQ连接工厂
-     * @param objectMapper JSON反序列化工具
      * @return 配置好的监听容器工厂
      */
     @Bean
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
-            ConnectionFactory connectionFactory,
-            ObjectMapper objectMapper) {
+            ConnectionFactory connectionFactory) {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
-        Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter(objectMapper);
-        factory.setMessageConverter(converter);
+        factory.setMessageConverter(new Jackson2JsonMessageConverter());
         return factory;
     }
 }

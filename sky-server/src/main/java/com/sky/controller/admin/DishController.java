@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.web.bind.annotation.*;
+import javax.validation.Valid;
 
 import java.util.List;
 
@@ -43,7 +44,7 @@ public class DishController {
             cacheNames = CachePreheatService.DISH_CACHE,
             key = "#dishDTO.categoryId"  // 清除该分类的缓存
     )
-    public Result save(@RequestBody DishDTO dishDTO) {
+    public Result save(@RequestBody @Valid DishDTO dishDTO) {
         log.info("新增菜品: {}", dishDTO);
         dishService.saveWithFlavor(dishDTO);
         return Result.success();
@@ -127,7 +128,7 @@ public class DishController {
             cacheNames = CachePreheatService.DISH_CACHE,
             allEntries = true
     )
-    public Result update(@RequestBody DishDTO dishDTO) {
+    public Result update(@RequestBody @Valid DishDTO dishDTO) {
         log.info("修改菜品：{}", dishDTO);
         dishService.updateWithFlavor(dishDTO);
         return Result.success();

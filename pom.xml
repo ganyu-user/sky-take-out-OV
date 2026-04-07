@@ -31,6 +31,7 @@
         <jaxb-api>2.3.1</jaxb-api>
         <poi>3.16</poi>
         <caffeine>2.9.3</caffeine>
+        <hutool>5.8.16</hutool>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -149,6 +150,13 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-cache</artifactId>
                 <version>2.7.3</version>
+            </dependency>
+
+            <!-- Hutool工具类 -->
+            <dependency>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-all</artifactId>
+                <version>${hutool}</version>
             </dependency>
 
         </dependencies>

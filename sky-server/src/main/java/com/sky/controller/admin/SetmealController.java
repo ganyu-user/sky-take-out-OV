@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.web.bind.annotation.*;
+import javax.validation.Valid;
 
 import java.util.List;
 
@@ -43,7 +44,7 @@ public class SetmealController {
             cacheNames = CachePreheatService.SETMEAL_CACHE,
             key = "#setmealDTO.categoryId"
     )
-    public Result save(@RequestBody SetmealDTO setmealDTO) {
+    public Result save(@RequestBody @Valid SetmealDTO setmealDTO) {
         log.info("新增套餐: {}", setmealDTO);
         setmealService.saveWithDish(setmealDTO);
         return Result.success();
@@ -110,7 +111,7 @@ public class SetmealController {
             cacheNames = CachePreheatService.SETMEAL_CACHE,
             allEntries = true
     )
-    public Result update(@RequestBody SetmealDTO setmealDTO) {
+    public Result update(@RequestBody @Valid SetmealDTO setmealDTO) {
         log.info("修改套餐: {}", setmealDTO);
         setmealService.update(setmealDTO);
         return Result.success();

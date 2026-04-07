@@ -17,6 +17,7 @@ import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import javax.validation.Valid;
 
 //import javax.xml.transform.Result;
 import java.util.HashMap;
@@ -85,7 +86,7 @@ public class EmployeeController {
      */
     @PostMapping
     @ApiOperation("save(新增员工)")
-    public Result save(@RequestBody EmployeeDTO employeeDTO){
+    public Result save(@RequestBody @Valid EmployeeDTO employeeDTO){
         log.info("新增员工：{}", employeeDTO);
         employeeService.save(employeeDTO);
         return Result.success();
@@ -137,7 +138,7 @@ public class EmployeeController {
      */
     @PutMapping()
     @ApiOperation("update(编辑员工)")
-    public Result update(@RequestBody EmployeeDTO employeeDTO){
+    public Result update(@RequestBody @Valid EmployeeDTO employeeDTO){
         log.info("编辑员工：{}", employeeDTO);
         employeeService.update(employeeDTO);
         return Result.success();
@@ -150,7 +151,7 @@ public class EmployeeController {
      */
     @PutMapping("/editPassword")
     @ApiOperation("editPassword(员工修改登录密码)")
-    public Result editPassword(@RequestBody PasswordEditDTO passwordEditDTO){
+    public Result editPassword(@RequestBody @Valid PasswordEditDTO passwordEditDTO){
         employeeService.editPassword(passwordEditDTO);
         return Result.success();
     }
