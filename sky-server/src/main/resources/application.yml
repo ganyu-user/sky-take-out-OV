@@ -52,6 +52,12 @@ sky:
     access-key-id: ${sky.alioss.access-key-id}
     access-key-secret: ${sky.alioss.access-key-secret}
     bucket-name: ${sky.alioss.bucket-name}
+  # 通义千问 AI 配置
+  aliyun:
+    dashscope:
+      api-key: ${sky.aliyun.dashscope.api-key}
+      endpoint: ${sky.aliyun.dashscope.endpoint}
+      model: ${sky.aliyun.dashscope.model}
   wechat:
     appid: ${sky.wechat.appid}
     secret: ${sky.wechat.secret}
