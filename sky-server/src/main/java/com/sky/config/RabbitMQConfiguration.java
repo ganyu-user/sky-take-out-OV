@@ -74,17 +74,31 @@ public class RabbitMQConfiguration {
     }
 
     /**
+     * 配置ObjectMapper，支持Java 8日期时间类型
+     * @return 配置好的ObjectMapper
+     */
+    @Bean
+    public ObjectMapper objectMapper() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        JavaTimeModule javaTimeModule = new JavaTimeModule();
+        objectMapper.registerModule(javaTimeModule);
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        return objectMapper;
+    }
+
+    /**
      * 配置RabbitTemplate（消息发送模板）
      * RabbitTemplate用于发送消息到RabbitMQ
      * 配置Jackson2JsonMessageConverter实现对象与JSON的自动转换
      *
      * @param connectionFactory RabbitMQ连接工厂
+     * @param objectMapper 配置好的ObjectMapper
      * @return 配置好的RabbitTemplate
      */
     @Bean
-    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory, ObjectMapper objectMapper) {
         RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
-        rabbitTemplate.setMessageConverter(new Jackson2JsonMessageConverter());
+        rabbitTemplate.setMessageConverter(new Jackson2JsonMessageConverter(objectMapper));
         return rabbitTemplate;
     }
 
@@ -94,14 +108,15 @@ public class RabbitMQConfiguration {
      * 配置Jackson2JsonMessageConverter实现消息的反序列化
      *
      * @param connectionFactory RabbitMQ连接工厂
+     * @param objectMapper 配置好的ObjectMapper
      * @return 配置好的监听容器工厂
      */
     @Bean
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
-            ConnectionFactory connectionFactory) {
+            ConnectionFactory connectionFactory, ObjectMapper objectMapper) {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
-        factory.setMessageConverter(new Jackson2JsonMessageConverter());
+        factory.setMessageConverter(new Jackson2JsonMessageConverter(objectMapper));
         return factory;
     }
 }
