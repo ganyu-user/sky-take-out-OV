@@ -59,9 +59,13 @@ sky-server/src/main/java/com/sky/controller/admin/CacheController.java
 
 #### 修改类：
 sky-server/src/main/java/com/sky/config/RedisConfiguration.java
+
 sky-server/src/main/java/com/sky/controller/admin/SetmealController.java
+
 sky-server/src/main/java/com/sky/service/impl/SetmealServiceImpl.java
+
 sky-server/src/main/java/com/sky/controller/admin/DishController.java
+
 sky-server/src/main/java/com/sky/service/impl/DishServiceImpl.java
 
 
@@ -78,9 +82,11 @@ sky-server/src/main/java/com/sky/service/impl/DishServiceImpl.java
 - 
 #### 新增类：
 sky-server/src/main/java/com/sky/config/RabbitMQConfiguration.java
+
 sky-pojo/src/main/java/com/sky/pojo/OrderMessage.java
 #### 修改类：
 sky-server/src/main/java/com/sky/controller/admin/OrderController.java
+
 sky-server/src/main/java/com/sky/service/impl/OrderServiceImpl.java
 
 
@@ -104,13 +110,19 @@ sky-server/src/main/java/com/sky/service/impl/OrderServiceImpl.java
 
 #### 新增类：
 sky-server/src/main/java/com/sky/filter/XssFilter.java
+
 sky-common/src/main/java/com/sky/utils/XssUtils.java
 #### 修改类：
 sky-server/src/main/java/com/sky/config/WebMvcConfiguration.java
+
 sky-pojo/src/main/java/com/sky/dto/CategoryDTO.java
+
 sky-pojo/src/main/java/com/sky/dto/DishDTO.java
+
 sky-pojo/src/main/java/com/sky/dto/EmployeeDTO.java
+
 sky-pojo/src/main/java/com/sky/dto/PasswordEditDTO.java
+
 sky-pojo/src/main/java/com/sky/dto/SetmealDTO.java
 
 ### 5. 智能订单分析助手
@@ -129,12 +141,19 @@ sky-pojo/src/main/java/com/sky/dto/SetmealDTO.java
   
 #### 新增类：
 sky-server/src/main/java/com/sky/controller/admin/AIAnalysisController.java
+
 sky-server/src/main/java/com/sky/service/AIService.java
+
 sky-server/src/main/java/com/sky/service/impl/AIServiceImpl.java
+
 sky-server/src/main/java/com/sky/service/OrderDataService.java
+
 sky-server/src/main/java/com/sky/service/impl/OrderDataServiceImpl.java
+
 sky-pojo/src/main/java/com/sky/dto/AIAnalysisRequestDTO.java
+
 sky-pojo/src/main/java/com/sky/vo/AIAnalysisResponseVO.java
+
 sky-common/src/main/java/com/sky/properties/AliyunDashscopeProperties.java
 
 
@@ -153,7 +172,9 @@ sky-pojo/src/main/java/com/sky/dto/PasswordEditDTO.java
 
 #### 修改类：
 sky-server/src/main/java/com/sky/controller/admin/EmployeeController.java
+
 sky-server/src/main/java/com/sky/service/EmployeeService.java
+
 sky-server/src/main/java/com/sky/service/impl/EmployeeServiceImpl.java
 
 
