@@ -149,8 +149,8 @@ sky-pojo/src/main/java/com/sky/dto/PasswordEditDTO.java
 
 #### 修改类：
 sky-server/src/main/java/com/sky/controller/admin/EmployeeController.java
- sky-server/src/main/java/com/sky/service/EmployeeService.java
- sky-server/src/main/java/com/sky/service/impl/EmployeeServiceImpl.java
+sky-server/src/main/java/com/sky/service/EmployeeService.java
+sky-server/src/main/java/com/sky/service/impl/EmployeeServiceImpl.java
 
 
 ## 🛠️ 环境要求
